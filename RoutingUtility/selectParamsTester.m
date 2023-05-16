@@ -3,7 +3,8 @@ clear
 clc
 close all
 
-fieldSizes = (20:10:90).';
+% fieldSizes = (20:10:90).';
+fieldSizes = 80;
 maxRxWait = zeros(length(fieldSizes), 1);
 maxTxRelay = zeros(length(fieldSizes), 1);
 maxTx = zeros(length(fieldSizes), 1);
@@ -73,17 +74,17 @@ GatewaySensors = FindGWAtoms(...
 [numOfRemainingSensors, blockChainsDB, SensorUsages, SensorCovering, RelayRoutingBlocks] = Routing(SensorConnectivityGraph, GatewaySensors);
 [numOfSensors, ~] = size(SensorConnectivityGraph);
 
-% %% visualize
-% 
-% % the graph
-% G = graph(SensorConnectivityGraph);
-% p = plot(G);
-% 
+%% visualize
+
+% the graph
+G = graph(SensorConnectivityGraph);
+p = plot(G);
+
 % % the chains
 % [numOfBlocks, lengthOfChains] = size(blockChainsDB);
-% for i=1:numOfBlocks
+% for k=1:numOfBlocks
 %     color = rand(1,3);
-%     currentBlock = blockChainsDB(i,:);
+%     currentBlock = blockChainsDB(k,:);
 %     for j=1:lengthOfChains
 %         edge = [0,0];
 %         source = currentBlock(j).Rx;
@@ -125,6 +126,10 @@ maxRxWait(i) = max(counts);
 % max TxRelay actions for RU
 TxRelayList = [blockChainsDB(:).TxRelay];
 counts = histc(TxRelayList, unique(TxRelayList));
+criticalRUs = TxRelayList(counts>13);
+
+highlight(p, criticalRUs, 'Marker','*', 'NodeColor','yellow', 'MarkerSize', 20);
+
 maxTxRelay(i) = max(counts);
 
 % sanity check - max Tx actions for RU

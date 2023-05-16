@@ -9,7 +9,7 @@ SensorsInBlock                                  = 16;       % num of sensors in 
 SensorsInBlockBackOff                           = 1;%4;     % assign 1 to make 16 sensors for a block (root is part of the block)
 BlockRelayRoutingPermutations                  	= 3;        % when calculating the relay routing of the blocks try some permutations 
                                                             % and pick the permutation that yield the best routing 
-RatioBetweenActiveAndInactiveWeightsInRouting   = 1.5;      % initial weight
+RatioBetweenActiveAndInactiveWeightsInRouting   = 1;%1.5;      % initial weight
 InitialRoutingWeights                           = 1/RatioBetweenActiveAndInactiveWeightsInRouting;
 
 %% Params

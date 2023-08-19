@@ -1,9 +1,8 @@
 classdef DLMessage < handle
     
-    properties         
-        MAC      (?, 1) {mustBeVector}     % Ctrl: MAC
-        NRAP     (?, 1) {mustBeVector}     % Ctrl: NRAP 
-        Data     (?, 1) {mustBeVector}    % data to transmit (temp...) (8 bits each)
+    properties           
+        SharedControl             % NRAP+MAC to one RU
+        Data                      % data to transmit (temp...) (8 bits each)
     end
     
     methods (Static)
@@ -21,9 +20,16 @@ classdef DLMessage < handle
     end
 
     methods
-        function obj = ULMessage()
-            MsgParams = obj.setgetMsgParams();
-            %...
+        function obj = DLMessage(sharedControl, dataArr)
+            if nargin
+                obj.SharedControl = sharedControl;
+                obj.Data = dataArr;
+            else 
+                % there is no need to actually send information for the
+                % simulation purposes (but maybe we'll change our minds...)
+                obj.SharedControl = -1;
+                obj.Data = -1;
+            end
         end
         
         function obj = AddInfo(ctrl, data, sigIndex)

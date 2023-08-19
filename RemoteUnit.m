@@ -8,7 +8,8 @@ classdef RemoteUnit < handle
       NumWakeUpTS       (1,1)  {mustBeInteger}      % number of wake up time slots - for analysis  
       ReachableRUs      (1,:)  {mustBeVector}       % list of reachable RUs and SNR measurements 
       Packet                                   = [] % the actual packet 
-      IsAssociated      (1,1)                  = 0  % is the RU connected to the network      
+      IsAssociated      (1,1)                  = 0  % is the RU connected to the network 
+%       data                                          % ?
    end
 
    methods (Static)
@@ -77,7 +78,8 @@ classdef RemoteUnit < handle
                if strcmp(action, 'Tx')
                    obj.createPacket(direction); % create/modify packet to transmit 
                    channel.writeToChannel(obj.Packet, freqIndex, obj.ID);
-                   fprintf("%d transmitted packet %s\n", obj.ID, obj.Packet);
+%                    fprintf("%d transmitted packet %s\n", obj.ID, obj.Packet);
+                   fprintf("%d transmitted packet \n", obj.ID);
                    
                    % delete the packet from RU's memory 
                    obj.Packet = [];  
@@ -90,14 +92,20 @@ classdef RemoteUnit < handle
 
                % Rx
                if strcmp(action, 'Rx')
-                   obj.Packet = channel.readFromChannel(freqIndex, obj.ID);
-                   fprintf("%d received packet %s\n", obj.ID, obj.Packet);
+                   if isempty(obj.Packet)
+                        obj.Packet = channel.readFromChannel(freqIndex, obj.ID);
+                   else
+                       packetToMerge = channel.readFromChannel(freqIndex, obj.ID);
+                       idx = find(~obj.Packet.Data); % maybe put some special value like -1 later
+                       obj.Packet.Data(idx) = packetToMerge.Data(idx);
+                   end
+                   fprintf("%d received packet \n", obj.ID);
                end
 
                % RxWait
                if strcmp(action, 'RxWait')
                    obj.Packet = channel.readFromChannel(freqIndex, obj.ID);
-                   fprintf("%d received (and wait...) packet %s\n", obj.ID, obj.Packet);
+                   fprintf("%d received (and wait...) packet \n", obj.ID);
                end
 
 
@@ -107,27 +115,28 @@ classdef RemoteUnit < handle
                % Tx
                if strcmp(action, 'Tx')
                    channel.writeToChannel(obj.Packet, freqIndex, obj.ID);
-                   fprintf("%d transmitted packet %s\n", obj.ID, obj.Packet);
+                   fprintf("%d transmitted packet\n", obj.ID);
                end
 
                % TxWait
                if strcmp(action, 'TxWait')
                    channel.writeToChannel(obj.Packet, freqIndex, obj.ID);
-                   fprintf("%d transmitted (wait...) packet %s\n", obj.ID, obj.Packet);
+                   fprintf("%d transmitted (wait...) packet\n", obj.ID);
                end
 
                % Rx
                if strcmp(action, 'Rx')
                    obj.Packet = channel.readFromChannel(freqIndex, obj.ID);
                    % save relevant signature... (bit-wise simulation)
-                   fprintf("%d received packet %s\n", obj.ID, obj.Packet);
+                   % obj.extractPacket???
+                   fprintf("%d received packet\n", obj.ID);
                end
 
                % RxRelay
                if strcmp(action, 'RxRelay')
                    obj.Packet = channel.readFromChannel(freqIndex, obj.ID);
                    % do not save any signature !
-                   fprintf("%d received (relay...) packet %s\n", obj.ID, obj.Packet);
+                   fprintf("%d received (relay...) packet\n", obj.ID);
                end
 
 
@@ -136,31 +145,42 @@ classdef RemoteUnit < handle
            end
        end
         
-
-       % create/modify the packet, depends on UL/DL and simulationLevel
-       function obj = createPacket(obj, link)
+       % create/modify the packet, depends on UL/DL and SimLevel
+       function obj = createPacket(obj, direction)
            GeneralParams = obj.setgetGeneralParams();
-           if strcmp(link, 'UL')
+           if strcmp(direction, 'UL')
 
                % if "packet" field is empty, there are two possible reasons:
-               % * this RU is a leaf in its block
-               % * the received packet was corrupted and therefore wasn't saved 
+               % 1. this RU is a leaf in its block
+               % 2. the received packet was corrupted and therefore wasn't saved
+
+               ctrl = 1; % those two should be fields of the obj
+               data = obj.Nrap.SigIndex;
 
                if isempty(obj.Packet)
                    if GeneralParams.SimLevel
                        obj.Packet = '1';
-                       fprintf("%d created new packet \n", obj.ID);
                    else
-                       % "bit-wise" simulation ----- to be continued 
+                       % ctrl and data should be saved in the RU's
+                       % memory and measured before
+                       obj.Packet = ULMessage(obj.Nrap.SigIndex, ctrl, data);
                    end
+                   fprintf("%d created new packet \n", obj.ID);
+
                else
-                   if ~simulationLevel % only for "bit-wise" simulation, add the signature
-                       % ....
+                   if ~GeneralParams.SimLevel 
+                       obj.Packet.addSig(obj.Nrap.SigIndex, ctrl, data);
                    end
                end
 
-           elseif strcmp(link, 'DL')
-               %....
+           elseif strcmp(direction, 'DL')
+               % there are no packet creations in DL, instead a packet is
+               % saved and the relevant fields are parsed (Rx) or just saved
+               % to be transmitted again later (RxRelay)
+               % here, we'll take care of the Rx operation only 
+               if ~GeneralParams.SimLevel
+                   % obj.Packet.getData ?
+               end
 
            else
                fprintf('link type must be UL/DL');

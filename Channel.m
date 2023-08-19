@@ -4,19 +4,31 @@ classdef Channel < handle
         SNRmatrix                    % ground truth - SNR between each pair of RUs
         SNRGatewayMatrix             % ground truth - SNR between each RU and the GW
         FreqCHList                   % a list of freqCH  
-        GeneralParams                % struct of general params
 
         PER                          % packet error rate
         BER                          % bit error rate
     end
     
+    methods (Static)
+       % define persistent variables:
+       % GeneralParam
+       % since those are the same for all instances
+
+       function out = setgetGeneralParams(generalParams)
+           persistent GeneralParams;
+           if nargin
+               GeneralParams = generalParams;
+           end
+           out = GeneralParams;
+       end
+   end
+
     methods
-        function obj = Channel(GeneralParams, SNRmatrix, SNRGatewayMatrix)
+        function obj = Channel(SNRmatrix, SNRGatewayMatrix)
             obj.FreqCHList = struct('RUsource', cell(0), 'packet', cell(0));
-            if (nargin == 3)
+            if (nargin == 2)
                 obj.SNRmatrix = SNRmatrix;
                 obj.SNRGatewayMatrix = SNRGatewayMatrix;
-                obj.GeneralParams = GeneralParams;
             end
             obj.PER = load('PER.mat').packetLossErrorRate;
             % obj.BER = load()...
@@ -28,6 +40,8 @@ classdef Channel < handle
         end
 
         function [packet] = readFromChannel(obj, freqCHIndex, RUdestination)
+            GeneralParams = obj.setgetGeneralParams();
+
             % here, we know the source and the destination, thus, we can
             % flip the bits properly 
 
@@ -41,24 +55,29 @@ classdef Channel < handle
             else
                 SNR = obj.SNRmatrix(RUsource, RUdestination);
             end
-            
-            if isa(packet, 'char')
-                packet = logical(packet-'0'); % convert to logical array
-            end
+
 
             % "packet-wise"
-            if (obj.GeneralParams.SimLevel == 1)
-                ber = obj.PER(SNR+1);
+            ber = obj.PER(SNR+1); 
             
             % "bit-wise"
-            else
-                % ber = ...
-            end
+            % if isHW....
 
-            isflipped = ber > rand(1,length(packet));
-            packet = xor(packet, isflipped);
+            isflipped = ber > rand();
             
-            packet = char(packet+'0'); % convert to chars 
+            % maybe this should be a the RemoteUnit class
+            if isflipped
+                % all the previous data should be earased, a new packet is
+                % created 
+                
+                fprintf("CRC failed - packet got earased\n");
+
+                if isa(packet, 'ULMessage')
+                    packet = ULMessage();
+                elseif isa(packet, 'DLMessage')
+                    packet = []; % if the packet got corrupted, the rest of the chain will not have any information
+                end
+            end
 
             % delete the packet from the channel
             obj.FreqCHList(freqCHIndex) = struct('RUsource', [], 'packet', []);

@@ -4,43 +4,25 @@ classdef NRAP < handle
     % regarded communication scheme 
     
     properties %(SetAccess = private)
-        NumTsFrame         (1,1)   {mustBeInteger}                   % number of TS in frame (9 bits)
-        SigIndex           (1,1)   {mustBeInteger}                   % signature index (4 bits)
-        freqChOfBlock      (1,1)   {mustBeInteger}                   % freq for ULRxTx, ULTx, DLRxTX and DLRx
+        NumTsFrame         (1,1)   {mustBeInteger}                     % number of TS in frame (9 bits)
+        SigIndex           (1,1)   {mustBeInteger}                     % signature index (4 bits)
+        freqChOfBlock      (1,1)   {mustBeInteger}                     % freq for ULRxTx, ULTx (DLRxTX and DLRx) (4 bits)
+  
+        % uplink parameters transmits   
+  
+        ULRxTx                                                         % The RU receives a packet at TS, and transmits (adding its own signature)
+                                                                       % at the sequential time slot (9 bits)
+                                                                       
+        ULRxTxRelay = struct('TS', cell(13,1), 'freqCH', cell(13,1));  % TS indexes &  freqs in which RU receives a messege and transmits
+                                                                       % it in the next TS (169 bits)
+  
+        ULRxWait    = struct('TS', cell(3,1));                         % TS indexes & freqs in which RU receives a message, saves it
+                                                                       % in its memory, and waits till the next Rx/RxWait (27 bits)
+          
+        ULTx                                                           % The RU transmits a packet at TS. 
 
-        % uplink parameters transmits 
-
-        ULRxTx                                                       % The RU receives a packet at TS, and transmits (adding its own signature)
-                                                                     % at the sequential time slot (9 bits)
-                                                                     
-        ULRxTxRelay = struct('TS', cell(5,1), 'freqCH', cell(5,1));  % TS indexes &  freqs in which RU receives a messege and transmits
-                                                                     % it in the next TS (65? bits)
-
-        ULRxWait    = struct('TS', cell(3,1));                       % TS indexes & freqs in which RU receives a message, saves it
-                                                                     % in its memory, and waits till the next Rx/RxWait (27 bits)
-        
-        ULTx                                                         % The RU transmits a packet at TS. 
-                                                                     % This fresh packet contain only this RU s signature 
-                                                                     % (i.e. this RU is the first in the block) (9 bits)
-                                                      
-        % downlink parameters 
-        % GW will provide only the UL parameters. The DL parameters will be
-        % calculated by the RU. 
-
-        DLRxTx                                                       % TS indexes (relative to frame start) & freqs 
-                                                                     % in which RU receives a message, extract its NRAP from it,
-                                                                     % saves the whole message and transmits it in the 
-                                                                     % next TS 
-
-        DLRxRelayTx = struct('TS', cell(5,1), 'freqCH', cell(5,1));  % TS indexes &  freqs in which RU receives a message and 
-                                                                     % transmits it in the sequential time slot, 
-                                                                     % without saving any part of the message in its memory
-
-        DLTxWait    = struct('TS', cell(3,1));                       % TS indexes & freqs in which RU transmits the message 
-                                                                     % it stored in its memory 
-
-        DLRx        
-       
+        isFirstInChain                                                 % a bit indicates whether the RU is a leaf or not
+     
     end
     
     methods

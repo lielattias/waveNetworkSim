@@ -1,6 +1,6 @@
 classdef Gateway < handle
 
-    properties (SetAccess = private)
+    properties % (SetAccess = private)
         SNRmatrix                               % estimated SNR matrix
                                                 % SNR[i,j] = SNR between RU i and RU j
         % SNRmatrix for new RUs 
@@ -12,20 +12,38 @@ classdef Gateway < handle
         PayloadBits                             % payload bits - the data collected from the RUs
         NumAssociatedRUs (1,1) {mustBeInteger}
         GatewayRUs
-        GeneralParams                           % struct of general params
 
 %         ConnectedRUs  (1,:) {mustBeVector}     % a list of all the RUs the GW know of
     end
+    
+     methods (Static)
+       % define persistent variables:
+       % NetworkChannel
+       % GeneralParam
+       % since those are the same for all instances
+       function out = setgetChannel(channel)
+           persistent NetworkChannel;
+           if nargin
+               NetworkChannel = channel;
+           end
+           out = NetworkChannel;
+       end
+
+       function out = setgetGeneralParams(generalParams)
+           persistent GeneralParams;
+           if nargin
+               GeneralParams = generalParams;
+           end
+           out = GeneralParams;
+       end
+   end
 
     methods
-        function obj = Gateway(GeneralParams, SNRmatrix, gatewayRUs)
+        function obj = Gateway(SNRmatrix, gatewayRUs)
             obj.NRAPList = NRAP.empty;
 
-            if nargin >= 1
-                obj.GeneralParams = GeneralParams;
-            end
             % in case we want to simulate a full network 
-            if nargin == 3
+            if nargin == 2
                 obj.SNRmatrix = SNRmatrix;
                 obj.GatewayRUs = gatewayRUs;
                 [obj.NumAssociatedRUs, ~] = size(SNRmatrix);
@@ -42,12 +60,12 @@ classdef Gateway < handle
         function obj = createNRAPList(obj)
             % NRAPList construction
             isEmptyStruct = @(s) ~isequaln(s, struct('Rx',[],'RxWait',[],'Tx',[],'TxRelay',[])); 
-
+            GeneralParams = obj.setgetGeneralParams();
             % params 
             numOfTrials = 3;
             minFrameLength = 100;
-            maxFrameLength = obj.GeneralParams.NumTsFrameMax;
-            maxfreqCH = obj.GeneralParams.NumFreqCh;
+            maxFrameLength = GeneralParams.NumTsFrameMax;
+            maxfreqCH = GeneralParams.NumFreqCh;
             increment = 1.2;
 
             frameLength = minFrameLength;
@@ -201,8 +219,6 @@ classdef Gateway < handle
                 for TSindex = 1:frameLength
 
                     currentNode = currentRow(TSindex);
-                    ULstruct = struct('TS', TSindex, 'freqCH', freqCH);
-                    DLstruct = struct('TS',  frameLength - TSindex + 1, 'freqCH', freqCH);
 
                     %%%%%%%%%%%%%%%% Tx %%%%%%%%%%%%%%%%
                     if ~isempty(currentNode.Tx)
@@ -210,9 +226,15 @@ classdef Gateway < handle
                         if sigIndex == 1 || isempty(currentRow(TSindex-1).Rx) || ~(currentRow(TSindex-1).Rx == currentNode.Tx)
                             obj.NRAPList(currentNode.Tx).SigIndex = sigIndex; % update sigIndex
                             sigIndex = sigIndex + 1;
-                            obj.NRAPList(currentNode.Tx).ULTx = ULstruct;
-                            % DL
-                            obj.NRAPList(currentNode.Tx).DLRx = DLstruct;
+                            obj.NRAPList(currentNode.Tx).ULTx = TSindex;
+                            if obj.NRAPList(currentNode.Tx).freqChOfBlock == 0
+                                obj.NRAPList(currentNode.Tx).freqChOfBlock = freqCH;
+                            % !!!!
+                            else
+                                if obj.NRAPList(currentNode.Tx).freqChOfBlock ~= freqCH
+                                    disp('huge problem!');
+                                end
+                            end
                         end
 
                         % the end of the chain
@@ -229,8 +251,6 @@ classdef Gateway < handle
                     if currentNode.Rx == 0
                         sigIndex = 1;
                     end
-                    % DL
-                    % RxRelay must occur after Tx
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -246,9 +266,16 @@ classdef Gateway < handle
                                 obj.NRAPList(currentNode.Rx).SigIndex = sigIndex;
                                 sigIndex = sigIndex + 1;
                             end
-                            obj.NRAPList(currentNode.Rx).ULRxTx = ULstruct;
-                            % DL
-                            obj.NRAPList(currentNode.Rx).DLRxTx = DLstruct;
+                            obj.NRAPList(currentNode.Rx).ULRxTx = TSindex;
+
+                            if obj.NRAPList(currentNode.Rx).freqChOfBlock == 0
+                                obj.NRAPList(currentNode.Rx).freqChOfBlock = freqCH;
+                            % !!!!
+                            else
+                                if obj.NRAPList(currentNode.Rx).freqChOfBlock ~= freqCH
+                                    disp('huge problem!');
+                                end
+                            end
 
                         end
 
@@ -256,10 +283,7 @@ classdef Gateway < handle
                             % in this case, the RU is not part of the block, we
                             % don't update the sigIndex
                             endOfULRxTxRelay = sum(arrayfun(isEmptyNRAPfieldStruct,obj.NRAPList(currentNode.Rx).ULRxTxRelay));
-                            obj.NRAPList(currentNode.Rx).ULRxTxRelay(endOfULRxTxRelay + 1) = ULstruct;
-                            % DL
-                            endOfDLRxRelayTx = sum(arrayfun(isEmptyNRAPfieldStruct,obj.NRAPList(currentNode.Rx).DLRxRelayTx));
-                            obj.NRAPList(currentNode.Rx).DLRxRelayTx(endOfDLRxRelayTx + 1) = DLstruct;
+                            obj.NRAPList(currentNode.Rx).ULRxTxRelay(endOfULRxTxRelay + 1) = struct('TS', TSindex, 'freqCH', freqCH);
                         end
                     end
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -273,19 +297,25 @@ classdef Gateway < handle
                             sigIndex = sigIndex + 1;
                         end
                         endOfULRxWait = sum(arrayfun(isEmptyNRAPfieldStruct,obj.NRAPList(currentNode.RxWait).ULRxWait));
-                        obj.NRAPList(currentNode.RxWait).ULRxWait(endOfULRxWait + 1) = ULstruct;
-                        % DL
-                        endOfDLTxWait = sum(arrayfun(isEmptyNRAPfieldStruct,obj.NRAPList(currentNode.RxWait).DLTxWait));
-                        obj.NRAPList(currentNode.RxWait).DLTxWait(endOfDLTxWait + 1) = DLstruct;
+                        obj.NRAPList(currentNode.RxWait).ULRxWait(endOfULRxWait + 1) = struct('TS', TSindex);
+
+                         if obj.NRAPList(currentNode.RxWait).freqChOfBlock == 0
+                                obj.NRAPList(currentNode.RxWait).freqChOfBlock = freqCH;
+                            % !!!!
+                            else
+                                if obj.NRAPList(currentNode.RxWait).freqChOfBlock ~= freqCH
+                                    disp('huge problem!');
+                                end
+                         end
                     end
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+                
                 end
             end
 
             % add frameLength to all NRAP objects
             for i=1:obj.NumAssociatedRUs
-                obj.NRAPList(i).NumOfTS = frameLength;
+                obj.NRAPList(i).NumTsFrame = frameLength;
             end
 
             % save the final BlockChainsDB order
@@ -298,26 +328,36 @@ classdef Gateway < handle
             obj.BlocksLocations = blockLocation;
         end
 
-        function obj = activate(obj, channel, direction, freqIndex, simulationLevel, epoch)
-
+        function obj = activate(obj, direction, freqIndex, epoch)
+            GeneralParams = obj.setgetGeneralParams();
+            channel = obj.setgetChannel();
             % UL
             if strcmp(direction, 'UL')
 
                 % GW receives packets & saves them
                 numOfBlock = find(ismember(obj.BlocksLocations,[freqIndex, epoch],'rows'));
-                if simulationLevel
+                if GeneralParams.SimLevel
                     obj.PayloadBits(numOfBlock,1) = str2double(channel.readFromChannel(freqIndex, 0));
                 else
-                    % tbc ...
+                    msg = channel.readFromChannel(freqIndex, 0);
+%                     if isempty(obj.PayloadBits)
+%                         obj.PayloadBits = zeros(GeneralParams.NumBitsPerSig, GeneralParams.NumBitsPerSig);
+%                     end
+                    obj.PayloadBits(numOfBlock,:) = msg.Data;
+                    
                 end
-                fprintf("GW RECEIVED block %d: %d\n", numOfBlock, obj.PayloadBits(numOfBlock));
+                fprintf("GW RECEIVED block %d\n", numOfBlock);
 
             % DL
             elseif strcmp(direction, 'DL')
                 % create packet (for bit-wise simulation should be more detailed)
-                packet = '1';
+                if GeneralParams.SimLevel
+                    % ???
+                else
+                    packet = DLMessage();
+                end
                 channel.writeToChannel(packet, freqIndex, 0);
-                fprintf("GW TRANSMITTED: %s\n", packet);
+                fprintf("GW TRANSMITTED\n");
 
             else
                fprintf('direction type must be UL/DL');

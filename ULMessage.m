@@ -1,4 +1,4 @@
-classdef ULMessage < handle
+classdef ULMessage < handle & BasicMessage
 
     properties
         MACs          % Ctrl: MAC (9 bits each) 
@@ -24,6 +24,7 @@ classdef ULMessage < handle
     methods
     
         function obj = ULMessage(sigIndex, ctrl, data)
+            obj@BasicMessage(); % superclass constructor
             msgParams = obj.setgetMsgParams();
             obj.MACs = zeros(msgParams.NumSigPerPacket, 1);
             obj.SNR = zeros(msgParams.NumSigPerPacket, 1);

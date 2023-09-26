@@ -1,4 +1,4 @@
-classdef DLMessage < handle
+classdef DLMessage < handle & BasicMessage
     
     properties           
         SharedControl             % NRAP+MAC to one RU

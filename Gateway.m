@@ -225,15 +225,16 @@ classdef Gateway < handle
                         % the RU is first in its chain, transmit after RxWait or part of RxTx
                         if sigIndex == 1 || isempty(currentRow(TSindex-1).Rx) || ~(currentRow(TSindex-1).Rx == currentNode.Tx)
                             obj.NRAPList(currentNode.Tx).SigIndex = sigIndex; % update sigIndex
+
+                            % update isFirstInChain
+                            if sigIndex == 1
+                                obj.NRAPList(currentNode.Tx).isFirstInChain = 1;
+                            end
+                            
                             sigIndex = sigIndex + 1;
                             obj.NRAPList(currentNode.Tx).ULTx = TSindex;
                             if obj.NRAPList(currentNode.Tx).freqChOfBlock == 0
                                 obj.NRAPList(currentNode.Tx).freqChOfBlock = freqCH;
-                            % !!!!
-                            else
-                                if obj.NRAPList(currentNode.Tx).freqChOfBlock ~= freqCH
-                                    disp('huge problem!');
-                                end
                             end
                         end
 
@@ -270,11 +271,6 @@ classdef Gateway < handle
 
                             if obj.NRAPList(currentNode.Rx).freqChOfBlock == 0
                                 obj.NRAPList(currentNode.Rx).freqChOfBlock = freqCH;
-                            % !!!!
-                            else
-                                if obj.NRAPList(currentNode.Rx).freqChOfBlock ~= freqCH
-                                    disp('huge problem!');
-                                end
                             end
 
                         end
@@ -301,11 +297,6 @@ classdef Gateway < handle
 
                          if obj.NRAPList(currentNode.RxWait).freqChOfBlock == 0
                                 obj.NRAPList(currentNode.RxWait).freqChOfBlock = freqCH;
-                            % !!!!
-                            else
-                                if obj.NRAPList(currentNode.RxWait).freqChOfBlock ~= freqCH
-                                    disp('huge problem!');
-                                end
                          end
                     end
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

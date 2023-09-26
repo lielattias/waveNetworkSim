@@ -17,11 +17,11 @@ classdef NRAP < handle
                                                                        % it in the next TS (169 bits)
   
         ULRxWait    = struct('TS', cell(3,1));                         % TS indexes & freqs in which RU receives a message, saves it
-                                                                       % in its memory, and waits till the next Rx/RxWait (27 bits)
+                                                                       % in its memory, and waits till the next Rx/RxWait (18 bits)
           
-        ULTx                                                           % The RU transmits a packet at TS. 
+        ULTx                                                           % The RU transmits a packet at TS (9 bits)
 
-        isFirstInChain                                                 % a bit indicates whether the RU is a leaf or not
+        isFirstInChain = 0                                             % a bit indicates whether the RU is a leaf or not (1 bit)
      
     end
     

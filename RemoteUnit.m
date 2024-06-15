@@ -63,6 +63,10 @@ classdef RemoteUnit < handle
        function obj = setNRAP(obj, nrap)
             % add / change the NRAP field
             obj.Nrap = nrap;
+
+            if isequaln(nrap, NRAP())
+                fprintf(".....NOT EEEMMPPTTYYY.....");
+            end
        end
         
        function obj = setID(obj, id)

@@ -1,4 +1,4 @@
-function [numOfRemainingSensors, blockChainsDB, SensorUsages, SensorCovering, RelayRoutingBlocks] = Routing(SensorConnectivityGraph, GatewaySensors)
+function [numOfRemainingSensors, blockChainsDB, RemainingSensors, SensorUsages, SensorCovering, RelayRoutingBlocks] = Routing(SensorConnectivityGraph, GatewaySensors)
 % written by Lior 
 %% Configuration:
 

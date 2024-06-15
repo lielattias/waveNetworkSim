@@ -13,7 +13,7 @@ classdef Gateway < handle
         NumAssociatedRUs (1,1) {mustBeInteger}
         GatewayRUs
 
-%         ConnectedRUs  (1,:) {mustBeVector}     % a list of all the RUs the GW know of
+%         AssociatedRUs  (1,:) {mustBeVector}     % a list of all the RUs the GW know of
     end
     
      methods (Static)
@@ -54,7 +54,7 @@ classdef Gateway < handle
 
         function numOfRemainingSensors = routing(obj)
             % call an external function 
-            [numOfRemainingSensors, obj.BlockChainsDB] = Routing(obj.SNRmatrix, obj.GatewayRUs);       
+            [numOfRemainingSensors, obj.BlockChainsDB, remainingSensors] = Routing(obj.SNRmatrix, obj.GatewayRUs);       
         end
 
         function obj = createNRAPList(obj)

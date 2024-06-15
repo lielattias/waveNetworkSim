@@ -8,11 +8,11 @@ threshold = 10;
 
 % for now I am using this scenario creation, maybe I'll write my own later
 [SensorConnectivityGraph, GatewaySensors] = GenerateConnectivityMatrix(14);
-
-% save the info at the channel 
 SNRGateway = zeros(length(SensorConnectivityGraph), 1);
 SNRGateway(GatewaySensors) = threshold;
-channel = Channel(SensorConnectivityGraph*threshold, SNRGateway); % for now make all SNR 6 db
+
+% save the info at the channel 
+channel = Channel(SensorConnectivityGraph * threshold, SNRGateway); % for now make all SNR the same (threshold)
 
 % assign general params structs
 channel.setgetGeneralParams(Params.General);
@@ -23,12 +23,28 @@ Gateway.setgetGeneralParams(Params.General);
 ULMessage.setgetMsgParams(Params.Msg);
 DLMessage.setgetMsgParams(Params.Msg);
 
+[numOfRUs, ~] = size(SensorConnectivityGraph);
+
 % calculate the Routing --- not relevant to the real network
 GW = Gateway(SensorConnectivityGraph, GatewaySensors); % this matrix should be built during the network operation
 numOfRemainingSensors = GW.routing();
 GW.createNRAPList(); 
 
 %% external events inputs
+
+%% main loop: network operation
+%{
+advertising state --> until GW decides to GONG (re-route)
+re-route state --> until GW receives all ACKs (goes back to advertising state)
+
+UL function
+DL function
+join function
+
+freq-time matrix for associated RUs - constant matrix until re-route
+freq-time matrix for unassociated RUs and sync messages (associated RUs) -
+dynamic matrix depending on the communication
+%}
 
 %% main loop: network operation (no joining protocol)
 
@@ -37,15 +53,15 @@ direction = 'UL';
 simulationLevel = 1; % "packet-wise"
 
 % build RUs list
-RUs(GW.NumAssociatedRUs, 1) = RemoteUnit();
-for i=1:GW.NumAssociatedRUs
+RUs(numOfRUs, 1) = RemoteUnit();
+for i=1:numOfRUs
     RUs(i,1).setID(i);
     RUs(i,1).setNRAP(GW.NRAPList(i)); % assign NRAP for each RU (assumption) - unnecessary for the simulation
 end
 
 % UL
 if strcmp(direction, 'UL')
-    % use the freq-time matrix and go over the columns
+    % use the time-freq matrix and go over the columns
     for epoch = 1:width(GW.TimeFreqMatrix)
         currentEpoch = GW.TimeFreqMatrix(:, epoch); % matrix column
 
@@ -62,7 +78,7 @@ if strcmp(direction, 'UL')
             if ~isempty(cell.Rx)
                 if cell.Rx == 0
                     % GW "reads" the packet and saves it
-                    GW.activate(direction, freqIndex, epoch); % do it like RU
+                    GW.activate(direction, freqIndex, epoch);
                 else
                     RUs(cell.Rx).activate(direction, 'Rx', freqIndex);
                 end
